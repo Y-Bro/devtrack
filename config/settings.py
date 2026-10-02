@@ -127,3 +127,5 @@ MAILERS = {
         "BACKEND": "django.core.mail.backends.console.EmailBackend",
     },
 }
+
+REST_FRAMEWORK = {"EXCEPTION_HANDLER": "issues.exceptions.api_exception_handler"}

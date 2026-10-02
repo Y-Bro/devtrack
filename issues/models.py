@@ -17,7 +17,15 @@ class BaseEnitity(ABC):
         return {key: value for key, value in self.__dict__.items()}
 
 
-class Team(StrEnum):
+class ChoiceEnum(StrEnum):
+
+    @classmethod
+    def invalid_message(cls, field, value):
+        allowed = ", ".join(member.value for member in cls)
+        return f"Invalid {field} '{value}'. Allowed values: {allowed}"
+
+
+class Team(ChoiceEnum):
     BACKEND = "backend"
     FRONTEND = "frontend"
     QA = "qa"
@@ -38,20 +46,18 @@ class Reporter(BaseEnitity):
         if "@" not in self.email:
             raise ValueError("Invalid email")
         if self.team not in Team:
-            allowed = ", ".join(t.value for t in Team)
-            error = f"Invalid team '{self.team}'. Allowed values: {allowed}"
-            raise ValueError(error)
+            raise ValueError(Team.invalid_message("team", self.team))
         self.team = Team(self.team)
 
 
-class Status(StrEnum):
+class Status(ChoiceEnum):
     OPEN = "open"
     IN_PROGRESS = "in_progress"
     RESOLVED = "resolved"
     CLOSED = "closed"
 
 
-class Priority(StrEnum):
+class Priority(ChoiceEnum):
     LOW = "low"
     MEDIUM = "medium"
     HIGH = "high"
@@ -60,13 +66,15 @@ class Priority(StrEnum):
 
 class Issue(BaseEnitity):
 
+    FILTER_FIELDS = ("status", "priority", "reporter_id")
+
     def __init__(
         self,
         id: int,
         title: str,
         description: str,
         status: str,
-        prioirty: str,
+        priority: str,
         reporter_id: int,
         created_at: str | None = None,
     ):
@@ -75,7 +83,7 @@ class Issue(BaseEnitity):
         self.title = title
         self.description = description
         self.status = status
-        self.priority = prioirty
+        self.priority = priority
         self.reporter_id = reporter_id
 
     def validate(self):
@@ -84,15 +92,9 @@ class Issue(BaseEnitity):
         if not self.description:
             raise ValueError("Description cannot be empty")
         if self.status not in Status:
-            allowed = ", ".join(s.value for s in Status)
-            raise ValueError(
-                f"Invalid status '{self.status}'. Allowed values: {allowed}"
-            )
+            raise ValueError(Status.invalid_message("status", self.status))
         if self.priority not in Priority:
-            allowed = ", ".join(p.value for p in Priority)
-            raise ValueError(
-                f"Invalid priority '{self.priority}'. Allowed values: {allowed}"
-            )
+            raise ValueError(Priority.invalid_message("priority", self.priority))
         if not isinstance(self.reporter_id, int) or self.reporter_id <= 0:
             raise ValueError("reporter_id must be a positive integer")
         self.status = Status(self.status)
@@ -104,11 +106,39 @@ class Issue(BaseEnitity):
 
 class CriticalIssue(Issue):
 
+    def __init__(
+        self,
+        id: int,
+        title: str,
+        description: str,
+        status: str,
+        priority: str,
+        reporter_id: int,
+        created_at: str | None = None,
+    ):
+        super().__init__(
+            id, title, description, status, priority, reporter_id, created_at
+        )
+
     def describe(self):
         return f"[URGENT] {self.title} - needs immediate attention"
 
 
 class LowPriorityIssue(Issue):
+
+    def __init__(
+        self,
+        id: int,
+        title: str,
+        description: str,
+        status: str,
+        priority: str,
+        reporter_id: int,
+        created_at: str | None = None,
+    ):
+        super().__init__(
+            id, title, description, status, priority, reporter_id, created_at
+        )
 
     def describe(self):
         return f"{self.title} - low priority, handle when free"
